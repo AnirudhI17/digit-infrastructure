@@ -1,0 +1,26 @@
+# ==============================================================================
+# Elasticsearch Custom Configuration (Optimized for Developer Environment)
+# ==============================================================================
+
+cluster.name: digit-elasticsearch-cluster
+node.name: digit-es-node-01
+
+# Network binding
+network.host: 0.0.0.0
+http.port: 9200
+
+# Discovery Settings
+# Force single-node discovery to bypass cluster formation rules on dev systems
+discovery.type: single-node
+
+# Memory Locking (avoids ES swapping pages to disk, yielding high stability)
+bootstrap.memory_lock: true
+
+# Security & CORS (Disable authentication strictly for local sandbox ease, enable CORS)
+xpack.security.enabled: false
+http.cors.enabled: true
+http.cors.allow-origin: "*"
+http.cors.allow-headers: Authorization, Content-Type, Access-Control-Allow-Headers, X-Requested-With
+
+# Enable indices deletion and settings customization
+action.destructive_requires_name: true
