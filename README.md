@@ -1,63 +1,81 @@
-# DIGIT Infrastructure
+# DIGIT Local Dependency Environment
 
-This repository provides the core, shared infrastructure services required by DIGIT (Digital Infrastructure for Governance, Impact & Transformation) microservices for local development and testing.
+This repository provides a portable, zero-configuration, reproducible development environment containing all shared infrastructure and Java dependency services required to test the Go implementations of `tl-service` and `tl-calculator`.
 
-## Overview
+---
 
-Rather than maintaining separate, duplicated infrastructure setups across multiple microservice repositories, this repository serves as a single source of truth for standard developer dependency stacks. It configures and bootstraps the following central services:
+## 1. Repository Directory Structure
 
-- **PostgreSQL**: Relational database with automated multi-database bootstrap.
-- **Apache Kafka & Zookeeper**: Event streaming broker and coordination engine.
-- **Redis**: Fast, in-memory key-value store for caching and session state.
-- **Elasticsearch**: Search and analytics engine.
-
-All services are designed to be run via containerized configurations using local mounts for persistent volume storage.
-
-## Repository Directory Structure
-
-Below is an overview of the directory organization in this repository:
-
-*   [`postgres/`](file:///f:/digit%20infrastructure/postgres/): Contains configuration files, DB initialization hooks, and folders for migrations and seeding.
-*   [`kafka/`](file:///f:/digit%20infrastructure/kafka/): Houses broker and zookeeper configurations, and topic provisioning helper scripts.
-*   [`redis/`](file:///f:/digit%20infrastructure/redis/): Standard configurations for caching and persistence limits.
-*   [`elasticsearch/`](file:///f:/digit%20infrastructure/elasticsearch/): Node settings and resource boundaries optimized for local development.
-*   [`scripts/`](file:///f:/digit%20infrastructure/scripts/): Operational scripts for system checks, environment bootstrapping, and health monitoring.
-*   [`shared/`](file:///f:/digit%20infrastructure/shared/): Storage mount mappings, application configs, templates, examples, and logging folders shared across all microservices.
-*   [`docs/`](file:///f:/digit%20infrastructure/docs/): Central documentation folder containing development guidelines.
-
-## Development & Integration Guidelines
-
-Teammates must read and strictly adhere to the following developer guidelines when writing and integrating microservices:
-
-*   [**Local Developer Setup Guide**](file:///f:/digit%20infrastructure/docs/DEVELOPER_SETUP.md): Step-by-step local clone-to-launch guide and service logging setup.
-*   [**Platform Architecture Overview**](file:///f:/digit%20infrastructure/docs/ARCHITECTURE.md): Structural layout showing container port bounds and topology.
-*   [**Storage Integration Guidelines**](file:///f:/digit%20infrastructure/docs/STORAGE_GUIDELINES.md): Mount mappings conventions for writing files strictly to `/data/`.
-*   [**Configuration Management Guidelines**](file:///f:/digit%20infrastructure/docs/CONFIGURATION_GUIDELINES.md): Standard read conventions from `/config/` directories inside containers.
-*   [**Database Migration & Seeding Guidelines**](file:///f:/digit%20infrastructure/docs/DATABASE_GUIDELINES.md): SQL script directory definitions and ordering conventions.
-*   [**Service Integration Requirements**](file:///f:/digit%20infrastructure/docs/SERVICE_INTEGRATION_REQUIREMENTS.md): Service submission requirements, manifests, port allocations, and healthchecks.
-
-## Quick Start
-
-### 1. Prerequisites
-Ensure your local development machine satisfies the minimum resource configurations (e.g., 16GB RAM recommended, Docker, Docker Compose, Bash/WSL/Git Bash).
-
-### 2. Verify Your Environment
-Before spinning up any services, validate that your local environment is ready:
-```bash
-./scripts/validate.sh
+```
+digit-infrastructure/
+├── docker-compose.infrastructure.yml  # Shared infrastructure services (DB, Queue, Search, Cache)
+├── docker-compose.services.yml        # Java dependency services (egov-user, egov-workflow, etc.)
+├── .env.example                       # Central environment variables template
+├── README.md                          # Quickstart guide
+├── CONTRIBUTING.md                    # Integration & coding guidelines
+│
+├── services/                          # Zero-source Docker builds for dependency services
+│   ├── egov-user/                     # Each service contains:
+│   │   ├── Dockerfile                 # Multi-stage Docker builder (clones from official DIGIT repo)
+│   │   ├── .dockerignore              # Ignore rules
+│   │   ├── .env.example               # Port defaults
+│   │   ├── config/                    # Config overrides
+│   │   └── README.md                  # Service description
+│   ├── egov-mdms-service/
+│   ├── pdf-service/
+│   ├── ...
+│
+├── postgres/                          # SQL Migrations, reference data, and configs
+├── kafka/                             # Broker and zookeeper properties
+├── redis/                             # redis.conf default configurations
+├── elasticsearch/                     # elasticsearch.yml parameters
+├── shared/                            # Local mounts for /data and /config
+├── scripts/                           # Operations (setup, health checks, backup, resets)
+└── docs/                              # Detailed engineering guidelines
 ```
 
-### 3. Setup and Launch Environment
-Bootstraps local folder directory mounts, generates environment variables, and launches the entire container stack:
+---
+
+## 2. Quick Start Orchestration
+
+Follow these steps to run the complete environment:
+
+### Step 1: Pre-requisites Verification & Setup
+First, verify your system meets memory specifications and prepare local directories:
 ```bash
 ./scripts/setup.sh
 ```
+*(This automatically runs validations, boots up core environment variables, and pre-allocates directories).*
 
-### 4. Verify Services Status
-Verify that all running infrastructure engines are healthy and responsive:
+### Step 2: Build Application Service Images
+Since the repository holds zero Java source files directly, service images are compiled by cloning module source files dynamically from the official DIGIT repository during the Docker build stage:
+```bash
+docker compose -f docker-compose.services.yml build
+```
+
+### Step 3: Run the Complete Dependency Stack
+Start both the core infrastructure engines and all Java dependency services using the multi-file compose command:
+```bash
+docker compose \
+  -f docker-compose.infrastructure.yml \
+  -f docker-compose.services.yml up -d
+```
+
+### Step 4: Verify Environment Health
 ```bash
 ./scripts/healthcheck.sh
 ```
 
 ---
-For detailed service mapping, port allocations, and architecture details, refer to the [`docs/`](file:///f:/digit%20infrastructure/docs/) folder.
+
+## 3. Team Integration Workflow
+
+Teammates must follow this structured process to add or configure Java services:
+
+1.  **Clone Official Java Service**: Work locally on the Java repository to test configurations.
+2.  **Verify Service Locally**: Confirm the service starts and connects successfully.
+3.  **Expose Configurations**: Decouple any hardcoded database URL links, passwords, and file paths.
+4.  **Create Dockerfile**: Write a multi-stage Dockerfile that fetches source code from the official DIGIT-OSS repository and packages the target JAR.
+5.  **Place Artifacts in Services Directory**: Save the `Dockerfile`, `.dockerignore`, and service README under `services/<service-name>/`. Do **not** commit Java source code or JAR files.
+6.  **Add Service to Compose**: Register the service definition inside [`docker-compose.services.yml`](file:///f:/digit%20infrastructure/docker-compose.services.yml).
+7.  **Commit & Push**: Push changes to this repository so colleagues can pull and run updates instantly.

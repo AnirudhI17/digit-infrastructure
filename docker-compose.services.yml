@@ -1,0 +1,351 @@
+version: '3.8'
+
+services:
+  # ============================================================================
+  # egov-user service
+  # ============================================================================
+  egov-user:
+    build:
+      context: ./services/egov-user
+      dockerfile: Dockerfile
+    container_name: digit-egov-user
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/egov_user
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - digit-network
+
+  # ============================================================================
+  # egov-mdms-service
+  # ============================================================================
+  egov-mdms-service:
+    build:
+      context: ./services/egov-mdms-service
+      dockerfile: Dockerfile
+    container_name: digit-egov-mdms-service
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/egov_mdms_service
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - digit-network
+
+  # ============================================================================
+  # egov-localization
+  # ============================================================================
+  egov-localization:
+    build:
+      context: ./services/egov-localization
+      dockerfile: Dockerfile
+    container_name: digit-egov-localization
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/egov_localization
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    volumes:
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - digit-network
+
+  # ============================================================================
+  # egov-idgen
+  # ============================================================================
+  egov-idgen:
+    build:
+      context: ./services/egov-idgen
+      dockerfile: Dockerfile
+    container_name: digit-egov-idgen
+    restart: unless-stopped
+    ports:
+      - "8083:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/egov_idgen
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - digit-network
+
+  # ============================================================================
+  # egov-workflow-v2
+  # ============================================================================
+  egov-workflow-v2:
+    build:
+      context: ./services/egov-workflow-v2
+      dockerfile: Dockerfile
+    container_name: digit-egov-workflow-v2
+    restart: unless-stopped
+    ports:
+      - "8084:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/egov_workflow_v2
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    volumes:
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - digit-network
+
+  # ============================================================================
+  # pdf-service
+  # ============================================================================
+  pdf-service:
+    build:
+      context: ./services/pdf-service
+      dockerfile: Dockerfile
+    container_name: digit-pdf-service
+    restart: unless-stopped
+    ports:
+      - "8085:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pdf_service
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - digit-network
+
+  # ============================================================================
+  # egov-enc-service
+  # ============================================================================
+  egov-enc-service:
+    build:
+      context: ./services/egov-enc-service
+      dockerfile: Dockerfile
+    container_name: digit-egov-enc-service
+    restart: unless-stopped
+    ports:
+      - "8086:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/egov_enc_service
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - digit-network
+
+  # ============================================================================
+  # egov-location
+  # ============================================================================
+  egov-location:
+    build:
+      context: ./services/egov-location
+      dockerfile: Dockerfile
+    container_name: digit-egov-location
+    restart: unless-stopped
+    ports:
+      - "8087:8080"
+    volumes:
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
+    networks:
+      - digit-network
+
+  # ============================================================================
+  # egov-persister
+  # ============================================================================
+  egov-persister:
+    build:
+      context: ./services/egov-persister
+      dockerfile: Dockerfile
+    container_name: digit-egov-persister
+    restart: unless-stopped
+    ports:
+      - "8088:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/digit_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    volumes:
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - digit-network
+
+  # ============================================================================
+  # egov-accesscontrol
+  # ============================================================================
+  egov-accesscontrol:
+    build:
+      context: ./services/egov-accesscontrol
+      dockerfile: Dockerfile
+    container_name: digit-egov-accesscontrol
+    restart: unless-stopped
+    ports:
+      - "8089:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/egov_accesscontrol
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - digit-network
+
+  # ============================================================================
+  # egov-filestore
+  # ============================================================================
+  egov-filestore:
+    build:
+      context: ./services/egov-filestore
+      dockerfile: Dockerfile
+    container_name: digit-egov-filestore
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/egov_filestore
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - digit-network
+
+  # ============================================================================
+  # egov-url-shortening
+  # ============================================================================
+  egov-url-shortening:
+    build:
+      context: ./services/egov-url-shortening
+      dockerfile: Dockerfile
+    container_name: digit-egov-url-shortening
+    restart: unless-stopped
+    ports:
+      - "8091:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/egov_url_shortening
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      REDIS_HOST: redis
+    volumes:
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - digit-network
+
+  # ============================================================================
+  # egov-otp
+  # ============================================================================
+  egov-otp:
+    build:
+      context: ./services/egov-otp
+      dockerfile: Dockerfile
+    container_name: digit-egov-otp
+    restart: unless-stopped
+    ports:
+      - "8092:8080"
+    volumes:
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
+    networks:
+      - digit-network
+
+  # ============================================================================
+  # egov-common-masters
+  # ============================================================================
+  egov-common-masters:
+    build:
+      context: ./services/egov-common-masters
+      dockerfile: Dockerfile
+    container_name: digit-egov-common-masters
+    restart: unless-stopped
+    ports:
+      - "8093:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/egov_common_masters
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - digit-network
+
+# ==============================================================================
+# Shared Network Configuration
+# ==============================================================================
+networks:
+  digit-network:
+    name: digit-network
+    external: true
