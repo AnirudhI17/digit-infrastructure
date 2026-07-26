@@ -1,12 +1,12 @@
-# Architecture Overview
+# Platform Architecture Overview
 
-This document describes the architectural layout of the shared development infrastructure stack for the DIGIT platform.
+This document describes the architectural layout of the shared development infrastructure stack for the DIGIT platform, detailing how microservices communicate and access shared persistence channels.
 
-## High-Level Topology
+## Platform Boundaries
 
 ```mermaid
-graph TD
-    subgraph Local Workstation
+flowchart TD
+    subgraph Host Workstation
         subgraph Developer Environment [Infrastructure Namespace]
             DB[(PostgreSQL)]
             Cache[(Redis)]
@@ -15,36 +15,43 @@ graph TD
             KF[Kafka Broker]
         end
 
+        subgraph Local Shared Directories
+            Storage["shared/storage (Mounted: /data)"]
+            Config["shared/config (Mounted: /config)"]
+            Logs["shared/logs (Mounted: /var/log)"]
+        end
+
         subgraph DIGIT Services [Microservices Space]
             SVC1[User Service] --> DB
             SVC1 --> Cache
+            SVC1 -.-> Storage
+            SVC1 -.-> Config
             SVC2[Localization Service] --> DB
             SVC2 --> Cache
+            SVC2 -.-> Config
             SVC3[Billing Service] --> DB
             SVC3 --> KF
+            SVC3 -.-> Config
             SVC4[Search Indexer] --> KF
             SVC4 --> ES
+            SVC4 -.-> Storage
         end
     end
 
     KF <--> ZK
 ```
 
-## Service Components
+## Shared Services Directory Mapping
 
-### 1. Relational Persistence Layer (PostgreSQL)
-PostgreSQL handles persistent structured relational storage. In a typical DIGIT installation, multiple microservices utilize separate databases to maintain microservice boundaries. 
-- **Dynamic Database Bootstrapping**: The initialization sequence loads a dynamic bootstrapper script (`postgres/init/01-init-databases.sh`) to automatically spin up discrete database schemas dynamically defined in the environment.
+All services are built to communicate purely via container-to-container channels utilizing container names as host identifiers:
 
-### 2. Message Bus & Event Streaming Layer (Kafka & Zookeeper)
-Kafka is the primary backbone for asynchronous event communication (e.g. notifications, indexing triggers, transactional audit trails).
-- **Zookeeper**: Manages Kafka cluster state, topic configurations, and broker election.
-- **Dynamic Provisioning**: Broker configuration includes `auto.create.topics.enable=true` to simplify developer setups. A convenience topic creation helper `kafka/scripts/create-topics.sh` pre-configures standard topics.
+*   **Database Host**: `postgres` (Port `5432`)
+*   **Cache Store**: `redis` (Port `6379`)
+*   **Event Broker**: `kafka` (Port `29092` internal, `9092` external host)
+*   **Indexing Engine**: `elasticsearch` (Port `9200`)
 
-### 3. Caching & Fast Read-Write Store (Redis)
-Redis serves as the caching layer for user session management, access tokens, and localized dictionary items to reduce the load on PostgreSQL.
-- **Memory Safety**: Local configurations limit memory consumption (256MB) to ensure system stability when running several microservices.
+By mapping local directories:
+- `./shared/storage` to `/data` in container runtimes.
+- `./shared/config` to `/config` in container runtimes.
 
-### 4. Search & Indexing Engine (Elasticsearch)
-Elasticsearch stores documents for quick semantic and structural searching across multiple modules.
-- **Development Mode**: Set to `discovery.type=single-node` to avoid cluster discovery overhead on local workstations.
+We eliminate absolute dependencies on any specific developer's local filesystem paths, allowing instant deployment portability between Linux, macOS, and Windows workstation platforms.

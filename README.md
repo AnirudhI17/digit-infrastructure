@@ -22,7 +22,19 @@ Below is an overview of the directory organization in this repository:
 *   [`redis/`](file:///f:/digit%20infrastructure/redis/): Standard configurations for caching and persistence limits.
 *   [`elasticsearch/`](file:///f:/digit%20infrastructure/elasticsearch/): Node settings and resource boundaries optimized for local development.
 *   [`scripts/`](file:///f:/digit%20infrastructure/scripts/): Operational scripts for system checks, environment bootstrapping, and health monitoring.
-*   [`docs/`](file:///f:/digit%20infrastructure/docs/): Detailed documentation about port mapping, service dependencies, and troubleshooting guidelines.
+*   [`shared/`](file:///f:/digit%20infrastructure/shared/): Storage mount mappings, application configs, templates, examples, and logging folders shared across all microservices.
+*   [`docs/`](file:///f:/digit%20infrastructure/docs/): Central documentation folder containing development guidelines.
+
+## Development & Integration Guidelines
+
+Teammates must read and strictly adhere to the following developer guidelines when writing and integrating microservices:
+
+*   [**Local Developer Setup Guide**](file:///f:/digit%20infrastructure/docs/DEVELOPER_SETUP.md): Step-by-step local clone-to-launch guide and service logging setup.
+*   [**Platform Architecture Overview**](file:///f:/digit%20infrastructure/docs/ARCHITECTURE.md): Structural layout showing container port bounds and topology.
+*   [**Storage Integration Guidelines**](file:///f:/digit%20infrastructure/docs/STORAGE_GUIDELINES.md): Mount mappings conventions for writing files strictly to `/data/`.
+*   [**Configuration Management Guidelines**](file:///f:/digit%20infrastructure/docs/CONFIGURATION_GUIDELINES.md): Standard read conventions from `/config/` directories inside containers.
+*   [**Database Migration & Seeding Guidelines**](file:///f:/digit%20infrastructure/docs/DATABASE_GUIDELINES.md): SQL script directory definitions and ordering conventions.
+*   [**Service Integration Requirements**](file:///f:/digit%20infrastructure/docs/SERVICE_INTEGRATION_REQUIREMENTS.md): Service submission requirements, manifests, port allocations, and healthchecks.
 
 ## Quick Start
 
@@ -35,15 +47,14 @@ Before spinning up any services, validate that your local environment is ready:
 ./scripts/validate.sh
 ```
 
-### 3. Bootstrap Environment Variables
-Generate the `.env` configuration file from the provided example:
+### 3. Setup and Launch Environment
+Bootstraps local folder directory mounts, generates environment variables, and launches the entire container stack:
 ```bash
-./scripts/bootstrap.sh
+./scripts/setup.sh
 ```
-*(This creates local `.env` configuration and initializes required local folders for persistent data).*
 
 ### 4. Verify Services Status
-Once the containers are running (to be orchestrated using docker compose configurations introduced in later phases), verify their operational status:
+Verify that all running infrastructure engines are healthy and responsive:
 ```bash
 ./scripts/healthcheck.sh
 ```

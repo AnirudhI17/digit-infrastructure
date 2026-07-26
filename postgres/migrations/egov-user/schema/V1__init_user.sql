@@ -1,4 +1,4 @@
--- Mock user table migration script
+-- User database schema DDL
 CREATE TABLE IF NOT EXISTS eg_user (
     id VARCHAR(64) PRIMARY KEY,
     username VARCHAR(128) NOT NULL UNIQUE,
@@ -6,3 +6,5 @@ CREATE TABLE IF NOT EXISTS eg_user (
     active BOOLEAN DEFAULT TRUE,
     created_time BIGINT
 );
+
+CREATE INDEX IF NOT EXISTS idx_eg_user_username ON eg_user(username);

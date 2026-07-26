@@ -36,24 +36,14 @@ echo -e "${YELLOW}Launching infrastructure containers via Docker Compose...${NC}
 docker compose -f "$ROOT_DIR/docker-compose.infrastructure.yml" up -d
 
 # 4. Wait and provision Kafka topics
-echo -e "${YELLOW}Provisioning defaults...${NC}"
-if [ -f "$ROOT_DIR/kafka/scripts/create-topics.sh" ]; then
-    # Run the topic provisioner in the context of the running kafka container or locally
-    # We run it via container exec since host might not have kafka-topics.sh CLI installed.
-    echo "Waiting for Kafka container to execute topic setup..."
-    # Sleep a bit for broker startup
-    sleep 5
-    docker exec -it digit-kafka /bin/bash -c "/var/lib/kafka/data/../../../../../../../host_or_target/not_exists" 2>/dev/null || true
-    # A cleaner approach is copying the script or running it via standard broker exec
-    docker exec -d digit-kafka /bin/bash -c "KAFKA_BOOTSTRAP_SERVERS=localhost:9092 /var/lib/kafka/data/../../../../usr/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic egov-notification-sms --partitions 3 --replication-factor 1" || true
-    # Actually, we can copy or mount the kafka scripts into container and exec them:
-    # Our docker-compose file mounts kafka_data to /var/lib/kafka/data.
-    # To run topics provisioning, we can just run it using exec:
-    docker exec -t digit-kafka kafka-topics.sh --bootstrap-server localhost:9092 --create --topic egov-notification-sms --partitions 3 --replication-factor 1 --if-not-exists || true
-    docker exec -t digit-kafka kafka-topics.sh --bootstrap-server localhost:9092 --create --topic egov-notification-mail --partitions 3 --replication-factor 1 --if-not-exists || true
-    docker exec -t digit-kafka kafka-topics.sh --bootstrap-server localhost:9092 --create --topic save-user-details --partitions 3 --replication-factor 1 --if-not-exists || true
-    docker exec -t digit-kafka kafka-topics.sh --bootstrap-server localhost:9092 --create --topic update-user-details --partitions 3 --replication-factor 1 --if-not-exists || true
-    docker exec -t digit-kafka kafka-topics.sh --bootstrap-server localhost:9092 --create --topic egov-telemetry-data --partitions 3 --replication-factor 1 --if-not-exists || true
+echo -e "${YELLOW}Waiting for Kafka to start to provision topics...${NC}"
+sleep 5
+docker exec -t digit-kafka /scripts/create-topics.sh || true
+
+# 5. Initialize Elasticsearch Index Mappings
+if [ -f "$SCRIPT_DIR/init-elasticsearch.sh" ]; then
+    echo -e "${YELLOW}Initializing Elasticsearch Index Mappings...${NC}"
+    bash "$SCRIPT_DIR/init-elasticsearch.sh" || true
 fi
 
 echo -e "${GREEN}DIGIT Infrastructure setup successfully launched!${NC}"

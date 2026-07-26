@@ -1,0 +1,55 @@
+# ==============================================================================
+# DIGIT SERVICE STORAGE & INTEGRATION MANIFEST
+# ==============================================================================
+# Every microservice in the DIGIT project must fill out and submit this manifest.
+# Place the completed manifest under docs/manifests/<service-name>.yaml in the 
+# microservice repository.
+
+service:
+  name: "egov-service-name" # Name of the microservice (e.g. egov-user, tl-calculator)
+  port: 8080               # Container port used by the microservice
+  health_endpoint: "/health" # Endpoint to verify service health
+
+storage:
+  # List all subfolders within /data that this service reads from
+  read:
+    - "/data/uploads"
+    - "/data/filestore"
+  # List all subfolders within /data that this service writes to
+  write:
+    - "/data/uploads"
+    - "/data/temp"
+
+config:
+  # List all config files this service loads from /config on startup
+  - "/config/application/application.yml"
+  - "/config/application/egov-service-name.yml"
+  - "/config/mdms/global-configs.json"
+
+volumes:
+  # Map standard share points to containers
+  - host_path: "./shared/storage"
+    container_path: "/data"
+    read_only: false
+  - host_path: "./shared/config"
+    container_path: "/config"
+    read_only: true
+  - host_path: "./shared/logs"
+    container_path: "/var/log/egov-service"
+    read_only: false
+
+environment:
+  # Declare required environment variables
+  - name: "DB_URL"
+    value: "jdbc:postgresql://postgres:5432/egov_db"
+  - name: "KAFKA_BOOTSTRAP_SERVERS"
+    value: "kafka:29092"
+  - name: "REDIS_HOST"
+    value: "redis"
+
+dependencies:
+  # Mark infrastructural engines this service depends on
+  - "postgres"
+  - "kafka"
+  - "redis"
+  - "elasticsearch"

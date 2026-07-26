@@ -2,33 +2,48 @@
 set -e
 
 # ==============================================================================
-# Dynamic PostgreSQL Migration & Seed Framework
+# Dynamic PostgreSQL Migration & Seeding Engine
 # ==============================================================================
-# Discovers migration folders and seed scripts, creates necessary databases, 
-# and executes schema and seed SQL scripts in alphabetical order.
+# Discovers migration directories dynamically. For each service, it executes:
+# 1. Schema definition files (tables, indexes, constraints)
+# 2. Reference data (required configuration and system parameters)
+# 3. Sample test data (local developer records)
 
 MIGRATIONS_DIR="/migrations"
-SEED_DIR="/seed"
 
 echo "=============================================================================="
-echo "Starting Dynamic Schema Migration & Seed Framework..."
+echo "Starting Dynamic Schema Migration & Seeding Pipeline..."
 echo "=============================================================================="
 
-# ------------------------------------------------------------------------------
-# 1. RUN MIGRATIONS
-# ------------------------------------------------------------------------------
-if [ -d "$MIGRATIONS_DIR" ]; then
-    echo "Scanning migrations in $MIGRATIONS_DIR..."
+# Helper function to execute SQL files in a folder
+execute_sql_files() {
+    local folder_path=$1
+    local db_name=$2
+    local label=$3
     
-    # Sort folders alphabetically
+    if [ -d "$folder_path" ]; then
+        local sql_files=$(find "$folder_path" -maxdepth 1 -name "*.sql" -type f | sort)
+        if [ -n "$sql_files" ]; then
+            echo "  Running $label scripts..."
+            for sql_file in $sql_files; do
+                echo "    -> Executing: $(basename "$sql_file")"
+                psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$db_name" -f "$sql_file"
+            done
+        fi
+    fi
+}
+
+if [ -d "$MIGRATIONS_DIR" ]; then
+    echo "Scanning service migrations in $MIGRATIONS_DIR..."
+    
+    # Sort service folders alphabetically
     for dir in $(find "$MIGRATIONS_DIR" -mindepth 1 -maxdepth 1 -type d | sort); do
         SERVICE_NAME=$(basename "$dir")
-        # Format database name by replacing hyphens with underscores
         DB_NAME=$(echo "$SERVICE_NAME" | tr '-' '_')
         
-        echo "Processing migrations for service: $SERVICE_NAME (Database: $DB_NAME)..."
+        echo "Processing databases and files for: $SERVICE_NAME (Database: $DB_NAME)..."
         
-        # Ensure target database exists
+        # Ensure database exists
         DB_EXISTS=$(psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "postgres" -tAc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'")
         if [ "$DB_EXISTS" != '1' ]; then
             echo "  Database '$DB_NAME' does not exist. Provisioning database..."
@@ -38,54 +53,32 @@ if [ -d "$MIGRATIONS_DIR" ]; then
 EOSQL
         fi
         
-        # Find and sort SQL files alphabetically
-        SQL_FILES=$(find "$dir" -maxdepth 1 -name "*.sql" -type f | sort)
-        if [ -n "$SQL_FILES" ]; then
-            for sql_file in $SQL_FILES; do
-                echo "  -> Executing: $(basename "$sql_file")"
-                psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$DB_NAME" -f "$sql_file"
-            done
-        else
-            echo "  No SQL migration files found in '$SERVICE_NAME' folder."
-        fi
+        # Execute in order: Schema, Reference Data, Sample Data
+        execute_sql_files "$dir/schema" "$DB_NAME" "Schema/DLL"
+        execute_sql_files "$dir/reference-data" "$DB_NAME" "Reference Data"
+        execute_sql_files "$dir/sample-data" "$DB_NAME" "Sample Test Data"
+        
+        # Backward compatibility: run SQL files directly in the root of service folder if any exist
+        execute_sql_files "$dir" "$DB_NAME" "Legacy Root Migration"
     done
 else
     echo "No migrations folder found at $MIGRATIONS_DIR."
 fi
 
-# ------------------------------------------------------------------------------
-# 2. RUN SEED DATA
-# ------------------------------------------------------------------------------
+# Backward compatibility: execute seed scripts from /seed directory if it exists
+SEED_DIR="/seed"
 if [ -d "$SEED_DIR" ]; then
-    echo "Scanning seed data in $SEED_DIR..."
-    
-    # Sort folders alphabetically
+    echo "Scanning legacy seed data in $SEED_DIR..."
     for dir in $(find "$SEED_DIR" -mindepth 1 -maxdepth 1 -type d | sort); do
         SERVICE_NAME=$(basename "$dir")
         DB_NAME=$(echo "$SERVICE_NAME" | tr '-' '_')
-        
-        echo "Processing seed data for service: $SERVICE_NAME (Database: $DB_NAME)..."
-        
-        # Verify target database exists before seeding
         DB_EXISTS=$(psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "postgres" -tAc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'")
         if [ "$DB_EXISTS" = '1' ]; then
-            SQL_FILES=$(find "$dir" -maxdepth 1 -name "*.sql" -type f | sort)
-            if [ -n "$SQL_FILES" ]; then
-                for sql_file in $SQL_FILES; do
-                    echo "  -> Seeding: $(basename "$sql_file")"
-                    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$DB_NAME" -f "$sql_file"
-                done
-            else
-                echo "  No SQL seed files found in '$SERVICE_NAME' folder."
-            fi
-        else
-            echo "  [Warning] Skipping seed: Database '$DB_NAME' does not exist."
+            execute_sql_files "$dir" "$DB_NAME" "Legacy Seed Data"
         fi
     done
-else
-    echo "No seed folder found at $SEED_DIR."
 fi
 
 echo "=============================================================================="
-echo "Migration & Seed Execution Complete!"
+echo "Migration & Seeding Pipeline Complete!"
 echo "=============================================================================="

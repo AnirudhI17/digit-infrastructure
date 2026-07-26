@@ -1,0 +1,10 @@
+egov-notification-sms
+egov-notification-mail
+save-user-details
+update-user-details
+egov-telemetry-data
+payment-create-db
+collection-services-payment-receipt
+billing-service-invoice-create
+workflow-transition-events
+mdms-config-refresh

@@ -23,6 +23,8 @@ services:
       - ./postgres/init/02-run-migrations.sh:/docker-entrypoint-initdb.d/02-run-migrations.sh
       - ./postgres/migrations:/migrations:ro
       - ./postgres/seed:/seed:ro
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
     command: >
       postgres 
       -c config_file=/etc/postgresql/postgresql.conf 
@@ -50,6 +52,8 @@ services:
     volumes:
       - zookeeper_data:/var/lib/zookeeper/data
       - zookeeper_log:/var/lib/zookeeper/log
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
     healthcheck:
       test: ["CMD-SHELL", "echo ruok | nc localhost ${ZOOKEEPER_PORT:-2181} | grep imok"]
       interval: 10s
@@ -83,6 +87,9 @@ services:
       KAFKA_LOG_RETENTION_BYTES: ${KAFKA_LOG_RETENTION_BYTES:-1073741824}
     volumes:
       - kafka_data:/var/lib/kafka/data
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
+      - ./kafka/scripts:/scripts:ro
     depends_on:
       zookeeper:
         condition: service_healthy
@@ -106,6 +113,8 @@ services:
     volumes:
       - redis_data:/data
       - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./shared/storage:/shared-data
+      - ./shared/config:/config:ro
     command: redis-server /usr/local/etc/redis/redis.conf
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -135,6 +144,8 @@ services:
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
       - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - ./shared/storage:/data
+      - ./shared/config:/config:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://localhost:9200/_cat/health | grep -qE 'green|yellow'"]
       interval: 15s
